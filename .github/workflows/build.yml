@@ -1,0 +1,52 @@
+name: voxel-sandbox CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libx11-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libgl1-mesa-dev \
+            libvulkan-dev
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DGLFW_BUILD_WAYLAND=OFF
+          -DGLFW_BUILD_X11=ON
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp build/voxel_sandbox dist/
+          cp -r assets dist/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxel-sandbox-linux
+          path: dist
+          retention-days: 7
