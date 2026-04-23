@@ -5,10 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # -----------------------------------
 # Option: use local voxel engine
 # -----------------------------------
-option(VOXEL_ENGINE_USE_LOCAL "Use local voxel-engine instead of FetchContent" OFF)
+option(VOXEL_ENGINE_USE_LOCAL "Use local voxel-engine instead of FetchContent" OFF) 
 
 set(VOXEL_ENGINE_LOCAL_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/../voxel-engine"
@@ -27,11 +29,28 @@ else()
     FetchContent_Declare(
         voxel_engine
         GIT_REPOSITORY https://github.com/JustARandomBadDev/voxel-engine.git
-        GIT_TAG test
+        GIT_TAG dev
         GIT_SHALLOW TRUE
     )
 
     FetchContent_MakeAvailable(voxel_engine)
+endif()
+
+if(NOT TARGET glfw)
+    include(FetchContent)
+
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG 3.4
+    )
+
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable(glfw)
 endif()
 
 # -----------------------------------
@@ -39,6 +58,10 @@ endif()
 # -----------------------------------
 add_executable(voxel_sandbox
     src/main.cpp
+    src/sandbox/camera_controller.cpp
+    src/sandbox/sandbox_app.cpp
+    src/sandbox/world_streamer.cpp
+    src/sandbox/world_bootstrap.cpp
     src/world/perlin_noise.cpp
 )
 
@@ -50,6 +73,7 @@ target_include_directories(voxel_sandbox
 target_link_libraries(voxel_sandbox
     PRIVATE
         voxel_engine
+        glfw
 )
 
 get_target_property(VOXEL_ENGINE_TARGET_SOURCE_DIR voxel_engine SOURCE_DIR)

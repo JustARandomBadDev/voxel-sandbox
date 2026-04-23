@@ -1,11 +1,6 @@
 #ifndef PERLIN_NOISE_2D_HPP
 #define PERLIN_NOISE_2D_HPP
 
-#include <iostream>
-
-#include <cmath>
-#include <random>
-#include <algorithm>
 #include <glm/glm.hpp>
 
 class PerlinNoise2D
