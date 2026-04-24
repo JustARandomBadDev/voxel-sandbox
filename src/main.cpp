@@ -1,154 +1,105 @@
-#include <glm/glm.hpp>
-
-#include <chrono>
-#include <cmath>
-#include <filesystem>
+#include <cstdlib>
+#include <exception>
 #include <iostream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 
-#include "engine/voxel_engine.h"
-#include "world/perlin_noise.h"
+#include "sandbox/sandbox_config.h"
+#include "sandbox/sandbox_app.h"
 
-inline constexpr int   PROCEDURAL_OCTAVES = 2;
-inline constexpr float PROCEDURAL_FREQUENCY = 0.0054f;
-inline constexpr float PROCEDURAL_AMPLITUDE = 128.f;
-inline constexpr float PROCEDURAL_PERSISTENCE = 0.1f;
-inline constexpr float PROCEDURAL_MULT_FREQUENCY = 12.f;
+namespace {
 
-void procedural(VoxelEngine& engine) {
-    int size = 27;
-    PerlinNoise2D perlin_noise;
-
-    for (int x = -(size/2); x < size/2; x++) {
-        for (int y = -(size/2); y < size/2; y++) {
-            glm::ivec2 pos = {x, y};
-
-            float frequencies[PROCEDURAL_OCTAVES];
-            float amplitudes[PROCEDURAL_OCTAVES];
-
-            for (int i = 0; i < PROCEDURAL_OCTAVES; i++) {
-                frequencies[i] = PROCEDURAL_FREQUENCY * static_cast<float>(std::pow(PROCEDURAL_MULT_FREQUENCY, i));
-                amplitudes[i] = PROCEDURAL_AMPLITUDE * static_cast<float>(std::pow(PROCEDURAL_PERSISTENCE, i));
-            }
-
-            for (int vx = 0; vx < CHUNK_SIZE; vx++) {
-                for (int vz = 0; vz < CHUNK_SIZE; vz++) {
-                    float total = 0.0f;
-
-                    for (int i = 0; i < PROCEDURAL_OCTAVES; i++) {
-                        float fx = (pos.x * CHUNK_SIZE + vx) * frequencies[i];
-                        float fz = (pos.y * CHUNK_SIZE + vz) * frequencies[i];
-                        total += perlin_noise.noise_2d(fx, fz) * amplitudes[i];
-                    }
-
-                    int height = static_cast<int>(total);
-
-                    int voxel_start = 0;
-                    int voxel_end = 0;
-
-                    if (height <= 50) {
-                        voxel_end = height - 5;
-                        for (int vy = voxel_start; vy < voxel_end; ++vy) {
-                            engine.setVoxel({pos.x, vy / CHUNK_SIZE, pos.y}, {vx, vy % CHUNK_SIZE, vz}, 3);
-                        }
-
-                        voxel_start = voxel_end;
-                        voxel_end = height + 1;
-                        for (int vy = voxel_start; vy < voxel_end; ++vy) {
-                            engine.setVoxel({pos.x, vy / CHUNK_SIZE, pos.y}, {vx, vy % CHUNK_SIZE, vz}, 9);
-                        }
-
-                        voxel_start = voxel_end;
-                        voxel_end = 48;
-                        for (int vy = voxel_start; vy < voxel_end; ++vy) {
-                            engine.setVoxel({pos.x, vy / CHUNK_SIZE, pos.y}, {vx, vy % CHUNK_SIZE, vz}, 8);
-                        }
-                    } else {
-                        voxel_end = height - 2;
-                        for (int vy = voxel_start; vy < voxel_end; ++vy) {
-                            engine.setVoxel({pos.x, vy / CHUNK_SIZE, pos.y}, {vx, vy % CHUNK_SIZE, vz}, 3);
-                        }
-
-                        voxel_start = voxel_end;
-                        voxel_end = height;
-                        for (int vy = voxel_start; vy < voxel_end; ++vy) {
-                            engine.setVoxel({pos.x, vy / CHUNK_SIZE, pos.y}, {vx, vy % CHUNK_SIZE, vz}, 2);
-                        }
-
-                        engine.setVoxel({pos.x, height / CHUNK_SIZE, pos.y}, {vx, height % CHUNK_SIZE, vz}, 1);
-                    }
-                }
-            }
-        }
-    }
+void printUsage(const char* p_program_name) {
+    std::cout
+        << "Usage: " << p_program_name << " [options]\n"
+        << "  --generation <static|dynamic>\n"
+        << "  --static-size <chunks>     Static X/Z chunk radius\n"
+        << "  --size <chunks>            Alias for --static-size\n"
+        << "  --size-xz <chunks>         Dynamic load distance on X/Z\n"
+        << "  --size-y <chunks>          Dynamic load distance on Y\n"
+        << "  --help                     Show this help\n";
 }
 
-template<typename Func>
-double timeOf(Func func, std::string msg) {
-    auto start = std::chrono::high_resolution_clock::now();
-    func();
-    auto end = std::chrono::high_resolution_clock::now();
+int parseNonNegativeInt(std::string_view p_flag, std::string_view p_value) {
+    size_t parsed_size = 0;
+    const std::string value_string(p_value);
+    const int parsed_value = std::stoi(value_string, &parsed_size);
 
-    std::chrono::duration<double, std::milli> elapsed = end - start;
-    
-    std::cout << msg << elapsed.count() << " ms" << std::endl;
-
-    return elapsed.count();
-}
-
-void run() {
-    VoxelEngine engine;
-
-    VoxelEngineInitConfig init_config{
-        .cameraPos = {0, 10.0f, 0},
-        .fov = 70.0f,
-        .graphicsResources = {
-            .terrainTexture = "assets/textures/terrain.png",
-            .voxelVertexShader = "assets/shaders/vert.spv",
-            .voxelFragmentShader = "assets/shaders/frag.spv",
-            .meshingComputeShader = "assets/shaders/comp.spv",
-        },
-    };
-
-    engine.init(init_config);
-
-    // ------------------------ Temps Allocation ------------------------ //
-
-    double total = 0;
-
-    total += timeOf([&]() { procedural(engine); }, "Temps de génération du monde : ");
-    total += timeOf([&]() { engine.update(); }, "Temps de mise à jour moteur : ");
-
-    std::cout << "Temps total : " << total << std::endl;
-
-    // ------------------------------------------------------------------ //
-
-    auto lastTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    double elapsedTime;
-    int frameCount = 0;
-
-    while (engine.isRun()) {
-        currentTime = std::chrono::high_resolution_clock::now();    
-        elapsedTime = std::chrono::duration<double, std::milli>(currentTime - lastTime).count();
-        frameCount++;
-    
-        if (elapsedTime >= 1000.0) {
-            std::cout << "\rFPS: " << frameCount << " " << std::flush;
-            frameCount = 0;
-            lastTime = currentTime;
-        }
-
-        engine.update();
-        engine.render();
+    if (parsed_size != value_string.size() || parsed_value < 0) {
+        throw std::runtime_error("Invalid value for " + std::string(p_flag) + ": " + value_string);
     }
 
-    engine.shutdown();
+    return parsed_value;
 }
 
-int main(int argc, char const *argv[]) {
+SandboxConfig parseArgs(int argc, char** argv) {
+    SandboxConfig config;
+
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view arg = argv[i];
+
+        auto require_value = [&](std::string_view p_flag) -> std::string_view {
+            if (i + 1 >= argc) {
+                throw std::runtime_error("Missing value for " + std::string(p_flag));
+            }
+
+            ++i;
+            return argv[i];
+        };
+
+        if (arg == "--help" || arg == "-h") {
+            printUsage(argv[0]);
+            std::exit(EXIT_SUCCESS);
+        }
+
+        if (arg == "--generation") {
+            const std::string_view value = require_value(arg);
+            if (value == "static") {
+                config.generationMode = SandboxGenerationMode::Static;
+                continue;
+            }
+
+            if (value == "dynamic") {
+                config.generationMode = SandboxGenerationMode::Dynamic;
+                continue;
+            }
+
+            throw std::runtime_error("Invalid value for --generation: " + std::string(value));
+        }
+
+        if (arg == "--static-size" || arg == "--size") {
+            config.staticSize = parseNonNegativeInt(arg, require_value(arg));
+            continue;
+        }
+
+        if (arg == "--size-xz") {
+            config.dynamicSizeHorizontal = parseNonNegativeInt(arg, require_value(arg));
+            config.dynamicUnloadDistanceHorizontal = config.dynamicSizeHorizontal + 1;
+            continue;
+        }
+
+        if (arg == "--size-y") {
+            config.dynamicSizeVertical = parseNonNegativeInt(arg, require_value(arg));
+            config.dynamicUnloadDistanceVertical = config.dynamicSizeVertical + 1;
+            continue;
+        }
+
+        throw std::runtime_error("Unknown argument: " + std::string(arg));
+    }
+
+    return config;
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
     try {
-        run();
+        const SandboxConfig config = parseArgs(argc, argv);
+        SandboxApp app(config);
+        app.init();
+        app.run();
+        app.shutdown();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;

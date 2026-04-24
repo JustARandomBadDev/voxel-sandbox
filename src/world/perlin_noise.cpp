@@ -1,5 +1,8 @@
 #include "world/perlin_noise.h"
 
+#include <algorithm>
+#include <random>
+
 int SEED = 10000;
 
 PerlinNoise2D::PerlinNoise2D() {
