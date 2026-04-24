@@ -14,7 +14,7 @@ void printUsage(const char* p_program_name) {
     std::cout
         << "Usage: " << p_program_name << " [options]\n"
         << "  --generation <static|dynamic>\n"
-        << "  --static-size <chunks>\n"
+        << "  --static-size <chunks>     Static X/Z chunk radius\n"
         << "  --size <chunks>            Alias for --static-size\n"
         << "  --size-xz <chunks>         Dynamic load distance on X/Z\n"
         << "  --size-y <chunks>          Dynamic load distance on Y\n"

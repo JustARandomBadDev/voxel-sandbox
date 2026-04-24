@@ -1,5 +1,7 @@
 #include "sandbox/world_bootstrap.h"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 
 #include "core/config.h"
@@ -13,6 +15,15 @@ inline constexpr float PROCEDURAL_FREQUENCY = 0.0054f;
 inline constexpr float PROCEDURAL_AMPLITUDE = 128.f;
 inline constexpr float PROCEDURAL_PERSISTENCE = 0.1f;
 inline constexpr float PROCEDURAL_MULT_FREQUENCY = 12.f;
+inline constexpr int   WATER_SURFACE_Y = 47;
+
+int floorDivToChunk(int p_world_coordinate) {
+    int result = p_world_coordinate / CHUNK_SIZE;
+    if (p_world_coordinate < 0 && p_world_coordinate % CHUNK_SIZE != 0) {
+        --result;
+    }
+    return result;
+}
 
 float getTerrainHeight(int p_world_x, int p_world_z) {
     static PerlinNoise2D perlin_noise;
@@ -44,6 +55,55 @@ uint16_t getVoxelIdAtWorldPosition(int p_world_y, int p_height) {
 } // namespace
 
 namespace SandboxWorldBootstrap {
+
+void generateProceduralColumn(VoxelEngine& p_engine, glm::ivec2 p_chunk_column_pos, std::vector<glm::ivec3>& p_created_chunks) {
+    std::array<int, CHUNK_SIZE * CHUNK_SIZE> terrain_heights;
+    int max_world_y = -1;
+
+    for (int vx = 0; vx < CHUNK_SIZE; ++vx) {
+        for (int vz = 0; vz < CHUNK_SIZE; ++vz) {
+            const int world_x = p_chunk_column_pos.x * CHUNK_SIZE + vx;
+            const int world_z = p_chunk_column_pos.y * CHUNK_SIZE + vz;
+            const int height = static_cast<int>(getTerrainHeight(world_x, world_z));
+            terrain_heights[static_cast<size_t>(vx * CHUNK_SIZE + vz)] = height;
+            max_world_y = std::max(max_world_y, height <= 50 ? std::max(height, WATER_SURFACE_Y) : height);
+        }
+    }
+
+    if (max_world_y < 0) return;
+
+    const int max_chunk_y = floorDivToChunk(max_world_y);
+
+    for (int chunk_y = 0; chunk_y <= max_chunk_y; ++chunk_y) {
+        const glm::ivec3 chunk_pos = {p_chunk_column_pos.x, chunk_y, p_chunk_column_pos.y};
+        const int chunk_min_world_y = chunk_y * CHUNK_SIZE;
+        bool created_chunk = false;
+
+        for (int vx = 0; vx < CHUNK_SIZE; ++vx) {
+            for (int vz = 0; vz < CHUNK_SIZE; ++vz) {
+                const int height = terrain_heights[static_cast<size_t>(vx * CHUNK_SIZE + vz)];
+                const int voxel_max_world_y = std::min(
+                    chunk_min_world_y + CHUNK_SIZE - 1,
+                    height <= 50 ? std::max(height, WATER_SURFACE_Y) : height
+                );
+                if (voxel_max_world_y < chunk_min_world_y) continue;
+
+                for (int world_y = chunk_min_world_y; world_y <= voxel_max_world_y; ++world_y) {
+                    const uint16_t voxel_id = getVoxelIdAtWorldPosition(world_y, height);
+                    if (voxel_id == 0) continue;
+
+                    if (!created_chunk) {
+                        p_engine.createChunk(chunk_pos);
+                        p_created_chunks.push_back(chunk_pos);
+                        created_chunk = true;
+                    }
+
+                    p_engine.setVoxel(chunk_pos, {vx, world_y - chunk_min_world_y, vz}, voxel_id);
+                }
+            }
+        }
+    }
+}
 
 bool generateProceduralChunk(VoxelEngine& p_engine, glm::ivec3 p_chunk_pos) {
     bool created_chunk = false;

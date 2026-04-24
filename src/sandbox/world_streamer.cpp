@@ -61,17 +61,16 @@ void SandboxWorldStreamer::syncStaticWorld(VoxelEngine& p_engine, glm::ivec3 p_c
     const int static_size = _config.staticSize;
     _active_chunks.reserve(
         static_cast<size_t>((static_size * 2 + 1) *
-                            (static_size * 2 + 1) *
                             (static_size * 2 + 1))
     );
 
-    for (int y = p_center_chunk.y - static_size; y <= p_center_chunk.y + static_size; ++y) {
-        for (int x = p_center_chunk.x - static_size; x <= p_center_chunk.x + static_size; ++x) {
-            for (int z = p_center_chunk.z - static_size; z <= p_center_chunk.z + static_size; ++z) {
-                const glm::ivec3 chunk_pos = {x, y, z};
-                ActiveChunkState state;
-                state.createdInEngine = SandboxWorldBootstrap::generateProceduralChunk(p_engine, chunk_pos);
-                _active_chunks.emplace(makeChunkKey(chunk_pos), state);
+    std::vector<glm::ivec3> created_chunks;
+    for (int x = p_center_chunk.x - static_size; x <= p_center_chunk.x + static_size; ++x) {
+        for (int z = p_center_chunk.z - static_size; z <= p_center_chunk.z + static_size; ++z) {
+            created_chunks.clear();
+            SandboxWorldBootstrap::generateProceduralColumn(p_engine, {x, z}, created_chunks);
+            for (const glm::ivec3& chunk_pos : created_chunks) {
+                _active_chunks.emplace(makeChunkKey(chunk_pos), ActiveChunkState{.createdInEngine = true});
             }
         }
     }

@@ -13,7 +13,7 @@ constexpr const char* kWindowTitle = "Voxel Sandbox";
 constexpr glm::vec3 kInitialCameraPosition = {0.0f, 10.0f, 0.0f};
 constexpr float kCameraFov = 70.0f;
 constexpr float kCameraNearPlane = 0.1f;
-constexpr float kCameraFarPlane = 1000.0f;
+constexpr float kCameraFarPlane = 10000.0f;
 constexpr float kCameraMoveSpeed = 10.0f;
 constexpr float kCameraMouseSensitivity = 0.1f;
 
@@ -128,7 +128,7 @@ void SandboxApp::logStartupConfig() const {
     std::cout << "Sandbox generation mode: " << toString(_config.generationMode) << std::endl;
 
     if (_config.generationMode == SandboxGenerationMode::Static) {
-        std::cout << "Static chunk distance: " << _config.staticSize << " chunks" << std::endl;
+        std::cout << "Static X/Z chunk radius: " << _config.staticSize << " chunks" << std::endl;
         return;
     }
 
