@@ -11,11 +11,12 @@
 #include "core/camera.h"
 #include "engine/voxel_engine.h"
 #include "sandbox/camera_controller.h"
+#include "sandbox/sandbox_config.h"
 #include "sandbox/world_streamer.h"
 
 class SandboxApp {
 public:
-    SandboxApp();
+    explicit SandboxApp(SandboxConfig p_config = {});
     ~SandboxApp();
 
     SandboxApp(const SandboxApp&) = delete;
@@ -33,6 +34,7 @@ private:
     };
 
     GLFWwindow* _window = nullptr;
+    SandboxConfig _config;
     VoxelEngine _engine;
     Camera _camera;
     SandboxCameraController _camera_controller;
@@ -46,6 +48,7 @@ private:
     void initWindow();
     void initEngine();
     void bootstrapWorld();
+    void logStartupConfig() const;
     FrameStats updateFrameStats();
     void update();
     void render();

@@ -84,4 +84,4 @@ void fillTestChunk(VoxelEngine& p_engine, glm::ivec3 p_chunk_pos) {
     }
 }
 
-} // namespace SandboxWorldBootstrap
+} // namespace SandboxWorldBootstra

@@ -29,7 +29,7 @@ else()
     FetchContent_Declare(
         voxel_engine
         GIT_REPOSITORY https://github.com/JustARandomBadDev/voxel-engine.git
-        GIT_TAG dev
+        GIT_TAG main
         GIT_SHALLOW TRUE
     )
 

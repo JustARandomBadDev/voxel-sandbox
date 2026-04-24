@@ -30,14 +30,10 @@ double timeOf(Func func, const std::string& msg) {
 
 } // namespace
 
-SandboxApp::SandboxApp()
-: _camera_controller(kCameraMoveSpeed, kCameraMouseSensitivity),
-  _world_streamer(SandboxWorldStreamerConfig{
-      .loadDistanceHorizontal = 15,
-      .loadDistanceVertical = 15,
-      .unloadDistanceHorizontal = 16,
-      .unloadDistanceVertical = 16
-  }) {}
+SandboxApp::SandboxApp(SandboxConfig p_config)
+: _config(p_config),
+  _camera_controller(kCameraMoveSpeed, kCameraMouseSensitivity),
+  _world_streamer(_config) {}
 
 SandboxApp::~SandboxApp() {
     shutdown();
@@ -55,6 +51,7 @@ void SandboxApp::init() {
         kCameraFarPlane
     );
 
+    logStartupConfig();
     bootstrapWorld();
 
     _last_frame_time = std::chrono::high_resolution_clock::now();
@@ -127,6 +124,20 @@ void SandboxApp::bootstrapWorld() {
     std::cout << "Temps total : " << total << " ms" << std::endl;
 }
 
+void SandboxApp::logStartupConfig() const {
+    std::cout << "Sandbox generation mode: " << toString(_config.generationMode) << std::endl;
+
+    if (_config.generationMode == SandboxGenerationMode::Static) {
+        std::cout << "Static chunk distance: " << _config.staticSize << " chunks" << std::endl;
+        return;
+    }
+
+    std::cout << "Dynamic load distance xz: " << _config.dynamicSizeHorizontal << " chunks" << std::endl;
+    std::cout << "Dynamic load distance y: " << _config.dynamicSizeVertical << " chunks" << std::endl;
+    std::cout << "Dynamic unload distance xz: " << _config.dynamicUnloadDistanceHorizontal << " chunks" << std::endl;
+    std::cout << "Dynamic unload distance y: " << _config.dynamicUnloadDistanceVertical << " chunks" << std::endl;
+}
+
 SandboxApp::FrameStats SandboxApp::updateFrameStats() {
     const auto now = std::chrono::high_resolution_clock::now();
     const std::chrono::duration<float> frame_delta = now - _last_frame_time;
@@ -161,7 +172,9 @@ void SandboxApp::update() {
 
     _camera.updateProjection(_engine.getAspectRatio());
     _camera_controller.update(*_window, _camera, frame_stats.deltaTimeSeconds);
-    _world_streamer.update(_engine, _camera);
+    if (_config.generationMode == SandboxGenerationMode::Dynamic) {
+        _world_streamer.update(_engine, _camera);
+    }
     _engine.update(_camera);
 }
 
