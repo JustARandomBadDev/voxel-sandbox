@@ -30,7 +30,7 @@ The dynamic-world demo keeps a **30 × 16 × 30 chunk** region loaded around the
 
 Chunk generation and loading are currently single-threaded, so this mode is still experimental and may exhibit performance issues or occasional visual glitches during runtime.
 
-<!-- Add dynamic world demo video here -->
+https://github.com/user-attachments/assets/975e69c2-0e71-4dd3-a46c-a7fa575596b4
 
 ## Features
 
