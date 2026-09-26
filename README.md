@@ -16,6 +16,22 @@ engine behavior such as:
 The project is intentionally simple and exists to exercise the engine in a
 controlled environment.
 
+## Demo
+
+### Static World
+
+The static-world demo generates a **140 × 140 chunk** terrain, representing **5,017,600 surface blocks**.
+
+![Static world demo](docs/demo.png)
+
+### Dynamic World
+
+The dynamic-world demo keeps a **30 × 16 × 30 chunk** region loaded around the camera, for up to **14,400 chunks** managed dynamically.
+
+Chunk generation and loading are currently single-threaded, so this mode is still experimental and may exhibit performance issues or occasional visual glitches during runtime.
+
+<!-- Add dynamic world demo video here -->
+
 ## Features
 
 - Static world generation
